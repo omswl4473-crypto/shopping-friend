@@ -2,7 +2,7 @@
 <html lang="ko" data-share="1">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>서지윤 쇼핑템 모음</title>
 <style>
   :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1d1b; --mute:#77756f; --line:#e4e1da; --accent:#c8102e; --ok:#1d6b2c; }
@@ -19,6 +19,12 @@
   .controls { display:flex; flex-wrap:wrap; gap:8px; }
   input, select, textarea { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
   #q { flex:1 1 220px; }
+  .filters { display:flex; flex-wrap:wrap; gap:8px; }
+  .controls.folded .filters { display:none; }
+  .ftoggle { font:inherit; font-size:13px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .ftoggle b { font-weight:700; color:#fff; background:var(--accent); border-radius:10px; padding:0 6px; margin-left:5px; font-size:11px; }
+  .ftoggle b:empty { display:none; }
+  .ftoggle i { font-style:normal; margin-left:5px; color:var(--mute); }
   main { padding:16px; max-width:1100px; margin:0 auto; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:6px; }
@@ -115,6 +121,45 @@
   .trashbar { background:#f1efe9; border-radius:8px; padding:8px 10px; font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:8px; color:var(--mute); }
   .toast button { font:inherit; color:#ffb3b3; background:none; border:0; margin-left:10px; cursor:pointer; font-weight:700; }
   .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:8px 14px; border-radius:20px; font-size:13px; z-index:10; }
+
+  /* 폰: 머리말을 작게(스크롤하면 같이 올라감), 필터는 한 줄로 옆으로 밀기, 상품은 두 줄 */
+  @media (max-width: 600px) {
+    header { position:static; padding:10px 10px 6px; }
+    .top { margin-bottom:8px; gap:6px; }
+    h1 { font-size:16px; }
+    h1 small { font-size:12px; margin-left:6px; }
+    .view { font-size:12px; padding:5px 9px; }
+    .controls { gap:5px; }
+    #q { flex:1 1 0; min-width:0; font-size:13px; padding:6px 9px; }
+    .ftoggle { font-size:12px; padding:6px 9px; }
+    .filters { flex:1 1 100%; gap:5px; flex-wrap:nowrap; }
+    .controls select { flex:1 1 0; min-width:0; font-size:11px; padding:5px 2px 5px 5px; border-radius:7px; }
+    .tabs { padding:8px 0 0; gap:5px; }
+    .tab { font-size:12px; padding:4px 10px; }
+    main { padding:10px; }
+    .section { margin-bottom:18px; }
+    .section h2 { font-size:14px; margin:2px 2px 8px; }
+    .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .card { padding:8px; gap:4px; border-radius:10px; }
+    .thumb, .noimg { border-radius:6px; }
+    .brand { font-size:11px; }
+    .name { font-size:13px; line-height:1.3; }
+    .price { font-size:15px; }
+    .was { font-size:11px; gap:0 6px; }
+    .row { font-size:11px; gap:4px; flex-wrap:wrap; }
+    .row > span:last-child:not(.note):not(.tag) { text-align:left; }
+    .no { font-size:11px; padding:2px 5px; }
+    .tag, .adtag { font-size:10px; padding:1px 6px; }
+    .note, .avail, .src { font-size:11px; }
+    .card > .note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .naflag, .adflag { font-size:10px; padding:2px 6px; top:5px; }
+    .naflag { left:5px; } .adflag { right:5px; }
+    .btn { font-size:12px; padding:6px 8px; }
+    .pickbox, .trashbar { font-size:11px; padding:6px 8px; flex-wrap:wrap; }
+    .citem { grid-template-columns:72px 1fr; padding:8px; gap:8px; }
+    .summary { padding:10px 12px; }
+    .summary .total { font-size:17px; }
+  }
 </style>
 </head>
 <body>
@@ -129,6 +174,8 @@
   </div>
   <div class="controls">
     <input id="q" type="search" placeholder="상품명, 품번, 인플루언서 검색">
+    <button id="ftoggle" class="ftoggle" type="button" aria-expanded="true" aria-controls="filters">필터<b id="fcount"></b><i>▴</i></button>
+    <div id="filters" class="filters">
     <select id="inf"><option value="">전체 인플루언서</option></select>
     <select id="adf">
       <option value="">광고 포함 전체</option>
@@ -149,6 +196,7 @@
       <option value="ph">가격 높은순</option>
       <option value="name">이름순</option>
     </select>
+    </div>
   </div>
   <div id="brands" class="tabs"></div>
 </header>
@@ -564,6 +612,27 @@ document.addEventListener("change", e => {
   if (it && size) size.innerHTML = sizeOptions(it, sel.value, size.value);
 });
 ["q","inf","adf","pricef","sort"].forEach(id => $(id).addEventListener("input", render));
+
+/* ---------- 필터 접기 ----------
+   폰에서는 처음에 접어 두고, 컴퓨터에서는 펼쳐 둔다. 한 번 접거나 펴면 그 기기에서 기억한다.
+   접혀 있어도 버튼 옆 숫자로 지금 걸린 필터 개수를 보여준다. */
+const ctl = document.querySelector(".controls");
+function setFold(folded, remember) {
+  ctl.classList.toggle("folded", folded);
+  $("ftoggle").setAttribute("aria-expanded", String(!folded));
+  $("ftoggle").querySelector("i").textContent = folded ? "▾" : "▴";
+  if (remember) try { localStorage.setItem("filtersFolded", folded ? "1" : "0"); } catch (e) {}
+}
+function countFilters() {
+  const n = ["inf", "adf", "pricef"].filter(id => $(id).value).length + ($("sort").value !== "new" ? 1 : 0);
+  $("fcount").textContent = n ? n : "";
+}
+let savedFold = null;
+try { savedFold = localStorage.getItem("filtersFolded"); } catch (e) {}
+setFold(savedFold === null ? matchMedia("(max-width: 600px)").matches : savedFold === "1", false);
+$("ftoggle").addEventListener("click", () => setFold(!ctl.classList.contains("folded"), true));
+["inf","adf","pricef","sort"].forEach(id => $(id).addEventListener("input", countFilters));
+countFilters();
 load();
 setInterval(load, 15000);
 </script>
