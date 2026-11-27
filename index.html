@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko" data-share="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>친구 쇼핑템 모음</title>
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1d1b; --mute:#77756f; --line:#e4e1da; --accent:#c8102e; --ok:#1d6b2c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; background:var(--bg); color:var(--ink); }
+  header { position:sticky; top:0; background:var(--bg); padding:14px 16px 10px; border-bottom:1px solid var(--line); z-index:5; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  h1 { font-size:18px; margin:0; }
+  h1 small { font-weight:400; color:var(--mute); margin-left:8px; font-size:13px; }
+  .views { display:flex; background:#e9e6df; border-radius:10px; padding:3px; }
+  .view { font:inherit; font-size:13px; border:0; background:none; padding:6px 12px; border-radius:8px; cursor:pointer; color:var(--mute); }
+  .view b { font-weight:400; margin-left:4px; }
+  .view.on { background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; }
+  input, select, textarea { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
+  #q { flex:1 1 220px; }
+  main { padding:16px; max-width:1100px; margin:0 auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:6px; }
+  .card.picked { border-color:var(--ok); box-shadow:0 0 0 1px var(--ok) inset; }
+  .thumb { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#ece9e2; display:block; }
+  .noimg { width:100%; aspect-ratio:1/1; border-radius:8px; background:#ece9e2; color:var(--mute); font-size:12px; display:flex; align-items:center; justify-content:center; }
+  .brand { font-size:12px; color:var(--mute); }
+  .name { font-weight:600; font-size:15px; line-height:1.35; }
+
+  /* 가격: 세일이면 정가에 취소선 + 할인액(빨간 글씨), 그 아래 세일가(빨간 글씨) */
+  .price { font-size:17px; font-weight:700; }
+  .was { font-size:13px; font-weight:400; color:var(--mute); display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; }
+  .was s { text-decoration-thickness:1.5px; }
+  .disc { color:var(--accent); font-weight:700; }
+  .now.sale { color:var(--accent); }
+  .salelabel { color:var(--accent); }
+
+  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; }
+  .row > span.note:first-child { white-space:nowrap; }
+  .row > span:last-child:not(.note):not(.tag) { text-align:right; }
+  .no { font-family:ui-monospace,Menlo,monospace; background:#f1efe9; padding:3px 7px; border-radius:6px; border:0; cursor:pointer; }
+  .tag { font-size:11px; padding:2px 7px; border-radius:20px; background:#eee; color:var(--mute); }
+  .tag.ok { background:#e3f3e5; color:var(--ok); }
+  .tag.warn { background:#fdecc8; color:#8a5a00; }
+  .note { font-size:12px; color:var(--mute); overflow-wrap:anywhere; }
+  .card, .citem, .citem .body { min-width:0; }
+  .name { overflow-wrap:anywhere; }
+  a { color:var(--accent); text-decoration:none; }
+  .empty { text-align:center; color:var(--mute); padding:60px 10px; line-height:1.7; }
+  .tabs { display:flex; gap:6px; overflow-x:auto; padding:10px 0 2px; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { flex:none; font:inherit; font-size:13px; padding:6px 12px; border:1px solid var(--line); border-radius:20px; background:#fff; color:var(--ink); cursor:pointer; }
+  .tab b { font-weight:400; color:var(--mute); margin-left:4px; }
+  .tab.on { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .tab.on b { color:#cfcdc7; }
+  .section { margin-bottom:28px; }
+  .section h2 { font-size:16px; margin:4px 2px 10px; display:flex; align-items:baseline; gap:6px; }
+  .section h2 small { font-weight:400; color:var(--mute); font-size:13px; }
+
+  /* 구매 확정 */
+  .btn { font:inherit; font-size:13px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; }
+  .btn.primary { background:var(--ink); border-color:var(--ink); color:#fff; font-weight:600; }
+  .btn.ghost { border-color:transparent; background:none; color:var(--mute); padding:6px 4px; }
+  .btn.danger { color:var(--accent); }
+  .pickbox { background:#eef6ef; border-radius:8px; padding:8px 10px; font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .pickbox strong { color:var(--ok); }
+  .editor { background:#f6f5f2; border-radius:10px; padding:10px; display:grid; gap:8px; }
+  .editor label { font-size:12px; color:var(--mute); display:grid; gap:4px; }
+  .editor .two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
+  .editor label { min-width:0; }
+  .editor input, .editor select { width:100%; min-width:0; }
+  .editor .acts { display:flex; gap:6px; flex-wrap:wrap; }
+  .editor .acts .btn { flex:1 1 auto; }
+  .editor .acts .primary { flex:2 1 100%; }
+
+  .clist { display:grid; gap:10px; }
+  .citem { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; grid-template-columns:96px 1fr; gap:12px; }
+  .citem .thumb, .citem .noimg { aspect-ratio:3/4; }
+  .citem .body { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .opt { display:flex; flex-wrap:wrap; gap:6px; }
+  .opt span { font-size:13px; background:#f1efe9; border-radius:6px; padding:3px 8px; }
+  .opt span b { font-weight:400; color:var(--mute); margin-right:4px; }
+  .opt span.todo { background:#fdecc8; color:#8a5a00; }
+  .citem .editor { grid-column:1 / -1; }
+  .summary { position:sticky; bottom:0; background:var(--ink); color:#fff; border-radius:12px; padding:14px 16px; margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .summary .total { font-size:20px; font-weight:700; }
+  .summary .sub { font-size:12px; color:#cfcdc7; }
+  .summary .disc { color:#ff8a8a; }
+  /* 공홈 품절 / 공홈 구매 불가 */
+  .imgwrap { position:relative; }
+  .imgwrap.na .thumb { filter:grayscale(.85); opacity:.7; }
+  .naflag { position:absolute; left:8px; top:8px; background:var(--ink); color:#fff; font-size:12px; font-weight:700; padding:4px 8px; border-radius:6px; }
+  .tag.na { background:#fbe3e6; color:var(--accent); font-weight:700; }
+  .tag.other { background:#e6eefb; color:#1f4f9a; }
+  .avail { font-size:12px; color:var(--accent); font-weight:600; }
+  .opt span.warn { background:#fbe3e6; color:var(--accent); font-weight:600; }
+  /* 광고·협찬 여부 */
+  .adflag { position:absolute; right:8px; top:8px; font-size:12px; font-weight:800; padding:4px 9px; border-radius:6px; letter-spacing:.02em; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+  .adflag.ad { background:#ff6a00; color:#fff; }
+  .adflag.noad { background:#fff; color:var(--ok); border:1.5px solid var(--ok); }
+  .adtag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; cursor:help; }
+  .adtag.ad { background:#ff6a00; color:#fff; }
+  .adtag.noad { background:#e3f3e5; color:var(--ok); }
+  .adtag.none { background:#eee; color:var(--mute); font-weight:600; }
+  .adtag.unk { background:#fff; color:var(--mute); border:1px dashed #ccc; font-weight:600; }
+  .srcs { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; }
+  .src { font-size:12px; padding:2px 8px; border-radius:20px; background:#f1efe9; color:var(--ink); }
+  .src b { color:#ff6a00; font-weight:800; margin-left:2px; }
+  .src.ad { background:#fff1e6; }
+  .brandrow { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  html.share .views { display:none; }
+  .card.trashed { opacity:.75; }
+  .card.trashed .thumb { filter:grayscale(1); }
+  .trashbar { background:#f1efe9; border-radius:8px; padding:8px 10px; font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:8px; color:var(--mute); }
+  .toast button { font:inherit; color:#ffb3b3; background:none; border:0; margin-left:10px; cursor:pointer; font-weight:700; }
+  .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:8px 14px; border-radius:20px; font-size:13px; z-index:10; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>친구 쇼핑템 모음<small id="count"></small></h1>
+    <div class="views">
+      <button class="view on" data-view="all">전체 상품<b id="nAll"></b></button>
+      <button class="view" data-view="cart">구매 확정<b id="nCart"></b></button>
+      <button class="view" data-view="trash">휴지통<b id="nTrash"></b></button>
+    </div>
+  </div>
+  <div class="controls">
+    <input id="q" type="search" placeholder="상품명, 품번, 인플루언서 검색">
+    <select id="inf"><option value="">전체 인플루언서</option></select>
+    <select id="adf">
+      <option value="">광고 포함 전체</option>
+      <option value="ad">광고만</option>
+      <option value="clean">광고 제외</option>
+    </select>
+    <select id="pricef" title="세일 중이면 세일가 기준">
+      <option value="">가격대 전체</option>
+      <option value="0-30000">3만원 이하</option>
+      <option value="30001-50000">3만~5만원</option>
+      <option value="50001-100000">5만~10만원</option>
+      <option value="100001-">10만원 초과</option>
+      <option value="none">가격 미확인</option>
+    </select>
+    <select id="sort">
+      <option value="new">최근 추가순</option>
+      <option value="pl">가격 낮은순</option>
+      <option value="ph">가격 높은순</option>
+      <option value="name">이름순</option>
+    </select>
+  </div>
+  <div id="brands" class="tabs"></div>
+</header>
+<main>
+  <div id="grid"></div>
+  <div id="empty" class="empty" hidden></div>
+</main>
+<script>
+// 공유용 보기 전용 페이지(build_share.py가 만듦)에서는 true. 구매 확정·삭제·휴지통을 숨긴다.
+const READONLY = document.documentElement.dataset.share === "1";
+if (READONLY) document.documentElement.classList.add("share");
+let items = [], cart = {}, trash = {}, curBrand = "", view = "all", editing = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = n => typeof n === "number";
+const won = n => num(n) ? n.toLocaleString("ko-KR") + "원" : "가격 미확인";
+const key = i => String(i.id);
+const brandOf = i => i.brand || "브랜드 미상";
+// 현재 판매가: 세일가가 있으면 세일가, 없으면 price
+const now = i => num(i.sale_price) ? i.sale_price : i.price;
+// 정가: original_price가 있으면 그것, 없으면 예전 항목처럼 official_price
+const orig = i => num(i.original_price) ? i.original_price : i.official_price;
+const onSale = i => num(now(i)) && num(orig(i)) && orig(i) > now(i);
+
+async function getJSON(url, fallback) {
+  try { const r = await fetch(url + "?t=" + Date.now(), {cache:"no-store"}); if (!r.ok) throw 0; return await r.json(); }
+  catch (e) { return fallback; }
+}
+async function load() {
+  const [d, c, t] = READONLY ? [await getJSON("data.json", items), {}, {}]
+    : await Promise.all([getJSON("data.json", items), getJSON("cart.json", cart), getJSON("trash.json", trash)]);
+  const obj = x => (x && typeof x === "object" && !Array.isArray(x)) ? x : {};
+  items = mergeDupes(Array.isArray(d) ? d : []);
+  cart = obj(c);
+  trash = obj(t);
+  if (editing) return;            // 옵션을 고르는 중에는 화면을 다시 그리지 않는다
+  fillSelect("inf", "influencer");
+  render();
+}
+/* ---------- 같은 상품 합치기 ----------
+   브랜드 + 품번이 같으면 같은 상품으로 보고 카드 하나로 합친다.
+   먼저 들어온 항목(added가 이른 것)이 대표가 되고, 나머지는 '함께 소개한 게시물'(also_seen)로 붙는다.
+   data.json은 바꾸지 않으므로, 잘못 합쳐져도 데이터는 그대로 남아 있다. */
+const normNo = s => String(s ?? "").replace(/\s+/g, "").toUpperCase();
+const dupKey = i => i.item_no && i.brand ? `${String(i.brand).trim()}|${normNo(i.item_no)}` : null;
+function mergeDupes(list) {
+  const groups = new Map(), out = [];
+  for (const i of list) {
+    const k = dupKey(i);
+    if (!k) { out.push(i); continue; }
+    if (!groups.has(k)) { groups.set(k, []); out.push(k); }
+    groups.get(k).push(i);
+  }
+  return out.map(x => {
+    if (typeof x !== "string") return x;
+    const g = groups.get(x).slice().sort((a, b) => String(a.added || "").localeCompare(String(b.added || "")));
+    if (g.length === 1) return g[0];
+    const [p, ...rest] = g;
+    const seen = [...(p.also_seen || [])];
+    const have = new Set([p.source_url, ...seen.map(s => s.source_url)]);
+    for (const r of rest) {
+      for (const s of [{ source_url: r.source_url, influencer: r.influencer, note: r.note, ad: r.ad, ad_evidence: r.ad_evidence, merged_id: r.id }, ...(r.also_seen || [])]) {
+        if (s.source_url && have.has(s.source_url)) continue;
+        have.add(s.source_url); seen.push(s);
+      }
+    }
+    return { ...p, also_seen: seen, merged_ids: rest.map(r => r.id) };
+  });
+}
+// 이 상품을 소개한 게시물 전부 (대표 + 함께 소개한 게시물)
+const sourcesOf = i => [{ source_url: i.source_url, influencer: i.influencer, ad: i.ad, ad_evidence: i.ad_evidence }, ...(i.also_seen || [])];
+const influencersOf = i => [...new Set(sourcesOf(i).map(s => s.influencer).filter(Boolean))];
+
+function fillSelect(id, k) {
+  const sel = $(id), cur = sel.value;
+  const vals = [...new Set(items.flatMap(i => k === "influencer" ? influencersOf(i) : [i[k]]).filter(Boolean))].sort();
+  sel.innerHTML = sel.options[0].outerHTML + vals.map(v => `<option>${esc(v)}</option>`).join("");
+  sel.value = cur;
+}
+
+/* ---------- 조각 ---------- */
+function imgTag(src, fallback, alt) {
+  const fb = fallback && fallback !== src ? fallback : "";
+  if (!src && !fb) return `<div class="noimg">이미지 없음</div>`;
+  return `<img class="thumb" loading="lazy" referrerpolicy="no-referrer" alt="${esc(alt)}" src="${esc(src || fb)}" data-fb="${esc(src ? fb : "")}" onerror="imgFail(this)">`;
+}
+// 공홈 구매 불가 여부 (official_available이 false일 때만. 값이 없으면 모름으로 보고 표시하지 않는다)
+const notAvail = i => i.official_available === false;
+// 품절 때문이면 '공홈 품절', 공홈에서 상품이 사라졌으면 '공홈 구매 불가'
+const soldOutAll = i => notAvail(i) && /품절/.test(i.availability_note || "");
+const naLabel = i => soldOutAll(i) ? "공홈 품절" : "공홈 구매 불가";
+// 라벨과 겹치지 않는 설명만 덧붙인다
+const naDetail = i => soldOutAll(i) ? "모든 색상·사이즈" : (i.availability_note || "");
+const isSoldOut = (i, color, size) => !!(color && size && (i.sold_out || []).includes(`${color} / ${size}`));
+// 광고·협찬 여부: data.json의 ad 값 → 태그 종류와 문구
+function adOne(value) {
+  const v = String(value || "");
+  if (/유료\s*광고/.test(v)) return { cls: "ad", label: "유료 광고" };
+  if (/협찬|제품\s*제공/.test(v)) return { cls: "ad", label: "협찬" };
+  if (v === "광고") return { cls: "ad", label: "광고" };
+  if (v === "광고 아님") return { cls: "noad", label: "광고 아님" };
+  if (v === "표시 없음") return { cls: "none", label: "광고 표시 없음" };
+  return { cls: "unk", label: "광고 확인 전" };
+}
+// 여러 게시물에서 소개된 상품: 하나라도 광고면 '광고', 모두 광고 아님이면 '광고 아님'
+function adInfo(i) {
+  const all = sourcesOf(i).map(s => adOne(s.ad));
+  const ad = all.filter(a => a.cls === "ad");
+  if (ad.length) return all.length > 1 ? { cls: "ad", label: `${ad[0].label} ${ad.length}/${all.length}` } : ad[0];
+  if (all.some(a => a.cls === "unk")) return { cls: "unk", label: "광고 확인 전" };
+  if (all.every(a => a.cls === "noad")) return { cls: "noad", label: "광고 아님" };
+  return { cls: "none", label: "광고 표시 없음" };
+}
+function adTag(i) {
+  const a = adInfo(i);
+  if (a.cls !== "ad") return "";          // 광고인 것만 표시한다
+  const why = sourcesOf(i).map(s => `${s.influencer || "출처 미상"}: ${s.ad_evidence || "광고 여부 확인 전"}`).join("\n");
+  return `<span class="adtag ${a.cls}" title="${esc(why)}">${esc(a.label)}</span>`;
+}
+// 소개한 게시물이 2개 이상이면 인플루언서별로 보여준다
+function sourceChips(i) {
+  const s = sourcesOf(i);
+  if (s.length < 2) return "";
+  return `<div class="srcs"><span class="note">${s.length}곳에서 소개</span>${s.map(x => {
+    const a = adOne(x.ad);
+    return `<a class="src ${a.cls}" href="${esc(x.source_url || "#")}" target="_blank" rel="noopener" title="${esc((x.note ? x.note + "\n" : "") + (x.ad_evidence || ""))}">${esc(x.influencer || "출처 미상")}${a.cls === "ad" ? ` <b>${esc(a.label)}</b>` : ""}</a>`;
+  }).join("")}</div>`;
+}
+function imgBox(i, src, fallback) {
+  const a = adInfo(i);
+  const flag = a.cls === "ad" ? `<span class="adflag ${a.cls}" title="${esc(i.ad_evidence || "")}">${esc(a.label)}</span>` : "";
+  return `<div class="imgwrap${notAvail(i) ? " na" : ""}">${imgTag(src, fallback, i.name)}${notAvail(i) ? `<span class="naflag">${naLabel(i)}</span>` : ""}${flag}</div>`;
+}
+function verifyTag(i) {
+  if (i.verified) return `<span class="tag ok">공식 확인</span>`;
+  if ((i.other_sources || []).length) return `<span class="tag other">타사 확인</span>`;
+  return `<span class="tag">미확인</span>`;
+}
+function availLine(i) {
+  if (notAvail(i)) return `<div class="avail"><span class="tag na">${naLabel(i)}</span> ${esc(naDetail(i))}</div>`;
+  return "";
+}
+function otherLinks(i) {
+  return (i.other_sources || []).filter(o => o && o.url)
+    .map(o => ` · <a href="${esc(o.url)}" target="_blank" rel="noopener" title="${esc(o.note || "")}">${esc(o.name || "다른 판매처")}</a>`).join("");
+}
+function sizeOptions(i, color, val) {
+  return `<option value="">사이즈 선택</option>` + (i.sizes || []).map(s =>
+    `<option value="${esc(s)}"${s === val ? " selected" : ""}>${esc(s)}${isSoldOut(i, color, s) ? " · 품절" : ""}</option>`).join("");
+}
+function imgFail(el) {
+  if (el.dataset.fb) { const f = el.dataset.fb; el.dataset.fb = ""; el.src = f; }
+  else el.outerHTML = '<div class="noimg">이미지 없음</div>';
+}
+// 공식 이미지 주소의 색상 번호(krgoods_38_...)를 고른 색상 번호로 바꾼다. 형식이 다르면 null
+function colorImage(i, color) {
+  const code = String(color || "").match(/^(\d{2})\b/);
+  if (!code || !i.image_url || !/krgoods_\d+_/.test(i.image_url)) return null;
+  return i.image_url.replace(/krgoods_\d+_/, `krgoods_${code[1]}_`);
+}
+function priceBlock(i, qty = 1) {
+  // 세일 중인데 정가를 모르는 경우(기간한정가격 등): 세일가만 빨간색으로
+  if (!onSale(i)) return `<div class="price"><div class="now${num(i.sale_price) ? " sale" : ""}">${won(num(now(i)) ? now(i) * qty : now(i))}</div></div>`;
+  const o = orig(i) * qty, n = now(i) * qty, pct = Math.round((1 - now(i) / orig(i)) * 100);
+  return `<div class="price">
+      <div class="was"><span>정가 <s>${won(o)}</s></span><span class="disc">${(o - n).toLocaleString("ko-KR")}원 할인 (${pct}%)</span></div>
+      <div class="now sale">${won(n)}</div>
+    </div>`;
+}
+function metaLine(i) {
+  if (!i.sale_label && !i.price_checked) return "";
+  return `<div class="note">${i.sale_label ? `<span class="salelabel">${esc(i.sale_label)}</span>` : ""}${i.sale_label && i.price_checked ? " · " : ""}${i.price_checked ? `가격 확인 ${esc(String(i.price_checked).slice(5))}` : ""}</div>`;
+}
+function defaultColor(i) {
+  const m = String(i.image_url || "").match(/krgoods_(\d+)_/);
+  return (m && (i.colors || []).find(c => c.startsWith(m[1] + " "))) || "";
+}
+function optField(label, name, list, val, ph) {
+  if (Array.isArray(list) && list.length) {
+    const opts = list.includes(val) || !val ? list : [val, ...list];
+    return `<label>${label}<select name="${name}"><option value="">${ph}</option>${opts.map(v => `<option${v === val ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></label>`;
+  }
+  return `<label>${label}<input name="${name}" value="${esc(val)}" placeholder="${ph}"></label>`;
+}
+function editor(i) {
+  const p = cart[key(i)] || {};
+  const color = p.color ?? defaultColor(i);
+  const sizeField = Array.isArray(i.sizes) && i.sizes.length
+    ? `<label>사이즈<select name="size">${sizeOptions(i, color, p.size || "")}</select></label>`
+    : optField("사이즈", "size", i.sizes, p.size || "", "사이즈 선택");
+  return `<form class="editor" data-id="${esc(key(i))}">
+      ${notAvail(i) ? `<div class="avail">${soldOutAll(i) ? "지금 공홈에서 모든 색상·사이즈가 품절이에요" : `지금 공홈에서 살 수 없는 상품이에요${i.availability_note ? ` (${esc(i.availability_note)})` : ""}`}</div>` : ""}
+      <div class="two">
+        ${optField("색상", "color", i.colors, color, "색상 선택")}
+        ${sizeField}
+      </div>
+      <div class="two">
+        <label>수량<input name="qty" type="number" min="1" max="20" value="${esc(p.qty || 1)}"></label>
+        <label>메모<input name="memo" value="${esc(p.memo || "")}" placeholder="예: 매장 픽업"></label>
+      </div>
+      <div class="acts">
+        <button class="btn primary" type="submit">${cart[key(i)] ? "저장" : "구매 확정"}</button>
+        <button class="btn" type="button" data-act="close">닫기</button>
+        ${cart[key(i)] ? `<button class="btn danger" type="button" data-act="remove">구매 취소</button>` : ""}
+      </div>
+    </form>`;
+}
+function optChips(p, i) {
+  return `<div class="opt">
+      ${notAvail(i) ? `<span class="warn">${naLabel(i)}${naDetail(i) ? ` · ${esc(naDetail(i))}` : ""}</span>`
+        : isSoldOut(i, p.color, p.size) ? `<span class="warn">선택한 옵션 품절</span>` : ""}
+      <span class="${p.color ? "" : "todo"}"><b>색상</b>${esc(p.color || "미정")}</span>
+      <span class="${p.size ? "" : "todo"}"><b>사이즈</b>${esc(p.size || "미정")}</span>
+      <span><b>수량</b>${esc(p.qty || 1)}개</span>
+    </div>`;
+}
+
+/* ---------- 카드 ---------- */
+function card(i) {
+  const p = cart[key(i)], t = trash[key(i)];
+  const pick = READONLY ? "" : t ? `<div class="trashbar"><span>휴지통${t.deleted_at ? ` · ${esc(String(t.deleted_at).slice(5, 10))} 삭제` : ""}${p ? " · 구매 확정했던 상품" : ""}</span><button class="btn primary" data-act="restore" data-id="${esc(key(i))}">복구</button></div>`
+    : editing === key(i) ? editor(i)
+    : p ? `<div class="pickbox"><span><strong>✓ 구매 확정</strong> · ${esc(p.color || "색상 미정")} / ${esc(p.size || "사이즈 미정")}${(p.qty || 1) > 1 ? ` · ${p.qty}개` : ""}</span><button class="btn ghost" data-act="edit" data-id="${esc(key(i))}">변경</button></div>`
+    : `<button class="btn" data-act="edit" data-id="${esc(key(i))}">구매 확정하기</button>`;
+  return `
+    <div class="card${t ? " trashed" : p ? " picked" : ""}">
+      ${imgBox(i, i.image, i.image_url)}
+      <div class="brandrow"><div class="brand">${esc(i.brand)} · ${esc(influencersOf(i).join(", ") || (i.source_url ? "출처 미상" : "직접 추가"))}</div>${adTag(i)}</div>
+      <div class="name">${esc(i.name)}</div>
+      ${sourceChips(i)}
+      ${priceBlock(i)}
+      ${metaLine(i)}
+      ${availLine(i)}
+      <div class="row">
+        ${i.item_no ? `<button class="no" data-no="${esc(i.item_no)}" title="클릭하면 복사">${esc(i.item_no)}</button>` : `<span class="tag warn">품번 없음</span>`}
+        ${verifyTag(i)}
+      </div>
+      ${pick}
+      ${i.note ? `<div class="note">${esc(i.note)}</div>` : ""}
+      <div class="row"><span class="note">${esc(String(i.added || "").slice(0,10))}</span>
+        <span>${i.source_url ? `<a href="${esc(i.source_url)}" target="_blank" rel="noopener">원본 게시물</a>` : ""}${i.product_url ? `${i.source_url ? " · " : ""}<a href="${esc(i.product_url)}" target="_blank" rel="noopener">상품 페이지</a>` : ""}${otherLinks(i)}</span></div>
+      ${t || READONLY ? "" : `<div class="row"><span></span><button class="btn ghost" data-act="delete" data-id="${esc(key(i))}">삭제</button></div>`}
+    </div>`;
+}
+function cartItem(i) {
+  const p = cart[key(i)], qty = p.qty || 1;
+  return `
+    <div class="citem">
+      ${imgBox(i, colorImage(i, p.color), i.image || i.image_url)}
+      <div class="body">
+        <div class="brandrow"><div class="brand">${esc(i.brand)} · ${esc(influencersOf(i).join(", ") || (i.source_url ? "출처 미상" : "직접 추가"))}${i.item_no ? ` · <button class="no" data-no="${esc(i.item_no)}" title="클릭하면 복사">${esc(i.item_no)}</button>` : ""}</div>${adTag(i)}</div>
+        <div class="name">${esc(i.name)}</div>
+        ${optChips(p, i)}
+        ${priceBlock(i, qty)}
+        ${metaLine(i)}
+        ${p.memo ? `<div class="note">메모: ${esc(p.memo)}</div>` : ""}
+        <div class="row">
+          <span>${i.product_url ? `<a href="${esc(i.product_url)}" target="_blank" rel="noopener">상품 페이지</a>` : ""}${otherLinks(i)}</span>
+          ${editing === key(i) ? "" : `<button class="btn ghost" data-act="edit" data-id="${esc(key(i))}">변경 / 취소</button>`}
+        </div>
+      </div>
+      ${editing === key(i) ? editor(i) : ""}
+    </div>`;
+}
+
+/* ---------- 그리기 ---------- */
+function render() {
+  const q = $("q").value.trim().toLowerCase();
+  const f = $("inf").value, s = $("sort").value, af = $("adf").value;
+  const pf = $("pricef").value;
+  const priceOk = i => {
+    if (!pf) return true;
+    const p = now(i);
+    if (pf === "none") return !num(p);
+    if (!num(p)) return false;
+    const [lo, hi] = pf.split("-").map(x => x === "" ? Infinity : Number(x));
+    return p >= lo && p <= hi;
+  };
+  const adOk = i => { const isAd = adInfo(i).cls === "ad"; return !af || (af === "ad" ? isAd : !isAd); };
+  const alive = items.filter(i => !trash[key(i)]);
+  const trashed = items.filter(i => trash[key(i)]);
+  const inCart = alive.filter(i => cart[key(i)]);
+  $("nAll").textContent = alive.length;
+  $("nCart").textContent = inCart.length;
+  $("nTrash").textContent = trashed.length;
+  document.querySelectorAll(".view").forEach(b => b.classList.toggle("on", b.dataset.view === view));
+
+  const pool = view === "cart" ? inCart : view === "trash" ? trashed : alive;
+  const base = pool.filter(i => (!f || influencersOf(i).includes(f)) && adOk(i) && priceOk(i) &&
+    (!q || [i.name, i.item_no, ...influencersOf(i), i.brand, i.note, cart[key(i)]?.color, cart[key(i)]?.size].join(" ").toLowerCase().includes(q)));
+  const counts = {};
+  base.forEach(i => counts[brandOf(i)] = (counts[brandOf(i)] || 0) + 1);
+  const allBrands = [...new Set(pool.map(brandOf))].sort((x, y) => x.localeCompare(y, "ko"));
+  if (curBrand && !allBrands.includes(curBrand)) curBrand = "";
+  $("brands").innerHTML = [["", "전체", base.length], ...allBrands.map(v => [v, v, counts[v] || 0])]
+    .map(([v, label, n]) => `<button class="tab${v === curBrand ? " on" : ""}" data-brand="${esc(v)}">${esc(label)}<b>${n}</b></button>`).join("");
+
+  let list = base.filter(i => !curBrand || brandOf(i) === curBrand);
+  const price = i => num(now(i)) ? now(i) : Infinity;
+  list.sort((x, y) =>
+    s === "pl" ? price(x) - price(y) :
+    s === "ph" ? (num(now(y)) ? now(y) : -1) - (num(now(x)) ? now(x) : -1) :
+    s === "name" ? String(x.name).localeCompare(String(y.name), "ko") :
+    String(y.added).localeCompare(String(x.added)));
+  $("count").textContent = list.length + "개";
+
+  const groups = curBrand ? [[curBrand, list]]
+    : allBrands.map(v => [v, list.filter(i => brandOf(i) === v)]).filter(([, l]) => l.length);
+  const one = view === "cart" ? cartItem : card;
+  const wrap = view === "cart" ? "clist" : "grid";
+  let html = groups.map(([v, l]) => `
+    <section class="section">
+      ${curBrand ? "" : `<h2>${esc(v)}<small>${l.length}개</small></h2>`}
+      <div class="${wrap}">${l.map(one).join("")}</div>
+    </section>`).join("");
+
+  if (view === "cart" && list.length) {
+    let total = 0, full = 0, pcs = 0, unknown = 0;
+    list.forEach(i => { const qn = cart[key(i)].qty || 1; pcs += qn;
+      if (num(now(i))) { total += now(i) * qn; full += (num(orig(i)) ? orig(i) : now(i)) * qn; } else unknown++; });
+    const todo = list.filter(i => !cart[key(i)].color || !cart[key(i)].size).length;
+    html += `<div class="summary">
+        <div><div class="sub">${list.length}개 상품 · 총 ${pcs}개${todo ? ` · 옵션 미정 ${todo}개` : ""}${unknown ? ` · 가격 미확인 ${unknown}개` : ""}</div>
+          <div class="sub">${full > total ? `정가 <s>${won(full)}</s> · <span class="disc">${(full - total).toLocaleString("ko-KR")}원 할인</span>` : "할인 없음"}</div></div>
+        <div class="total">${won(total)}</div>
+      </div>`;
+  }
+  $("grid").innerHTML = html;
+
+  const e = $("empty");
+  e.hidden = list.length > 0;
+  e.innerHTML = view === "trash"
+    ? (trashed.length ? "조건에 맞는 상품이 없어요." : "휴지통이 비어 있어요.<br>삭제한 상품은 여기로 와서, 언제든 복구할 수 있어요.")
+    : view === "cart"
+    ? (inCart.length ? "조건에 맞는 상품이 없어요." : "아직 구매 확정한 상품이 없어요.<br>전체 상품에서 ‘구매 확정하기’를 눌러 색상과 사이즈를 골라 주세요.")
+    : (items.length ? "조건에 맞는 상품이 없어요." : "아직 저장된 상품이 없어요.<br>텔레그램으로 링크를 보내면 여기에 쌓여요.");
+}
+
+/* ---------- 저장 ---------- */
+function toast(msg, undo) {
+  document.querySelectorAll(".toast").forEach(x => x.remove());
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  if (undo) { const b = document.createElement("button"); b.textContent = "되돌리기"; b.onclick = () => { t.remove(); undo(); }; t.appendChild(b); }
+  document.body.appendChild(t); setTimeout(() => t.remove(), undo ? 4000 : 1600);
+}
+async function setTrash(id, deleted) {
+  try {
+    const r = await fetch("api/trash", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id, deleted, at: new Date().toISOString() }) });
+    if (!r.ok) throw new Error(r.status);
+    trash = await r.json();
+    return true;
+  } catch (e) {
+    toast("저장하지 못했어요. 서버가 켜져 있는지 확인해 주세요.");
+    return false;
+  }
+}
+async function saveCart(id, pick) {
+  try {
+    const r = await fetch("api/cart", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id, pick }) });
+    if (!r.ok) throw new Error(r.status);
+    cart = await r.json();
+    return true;
+  } catch (e) {
+    toast("저장하지 못했어요. 서버가 켜져 있는지 확인해 주세요.");
+    return false;
+  }
+}
+
+document.addEventListener("click", async e => {
+  const no = e.target.closest(".no");
+  if (no) { navigator.clipboard?.writeText(no.dataset.no); const t = no.textContent; no.textContent = "복사됨"; setTimeout(() => no.textContent = t, 900); return; }
+  const tab = e.target.closest(".tab");
+  if (tab) { curBrand = tab.dataset.brand; render(); return; }
+  const v = e.target.closest(".view");
+  if (v) { view = v.dataset.view; curBrand = ""; editing = null; render(); window.scrollTo(0, 0); return; }
+  const act = e.target.closest("[data-act]");
+  if (!act) return;
+  if (act.dataset.act === "edit") { editing = act.dataset.id; render(); return; }
+  if (act.dataset.act === "close") { editing = null; render(); return; }
+  if (act.dataset.act === "delete") {
+    const id = act.dataset.id;
+    if (await setTrash(id, true)) {
+      if (editing === id) editing = null;
+      render();
+      toast("휴지통으로 옮겼어요", async () => { if (await setTrash(id, false)) render(); });
+    }
+    return;
+  }
+  if (act.dataset.act === "restore") {
+    if (await setTrash(act.dataset.id, false)) { render(); toast("복구했어요"); }
+    return;
+  }
+  if (act.dataset.act === "remove") {
+    const id = act.closest("form").dataset.id;
+    if (await saveCart(id, null)) { editing = null; render(); toast("구매 목록에서 뺐어요"); }
+  }
+});
+document.addEventListener("submit", async e => {
+  const form = e.target.closest("form.editor");
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form), id = form.dataset.id;
+  const pick = { color: fd.get("color") || "", size: fd.get("size") || "", qty: Number(fd.get("qty")) || 1,
+                 memo: fd.get("memo") || "", updated: new Date().toISOString() };
+  const isNew = !cart[id];
+  if (await saveCart(id, pick)) { editing = null; render(); toast(isNew ? "구매 확정했어요" : "저장했어요"); }
+});
+// 편집 칸에서 색상을 바꾸면 그 색상의 품절 사이즈 표시를 다시 그린다
+document.addEventListener("change", e => {
+  const sel = e.target;
+  if (sel.name !== "color" || !sel.closest("form.editor")) return;
+  const form = sel.closest("form.editor"), it = items.find(i => key(i) === form.dataset.id), size = form.querySelector('select[name="size"]');
+  if (it && size) size.innerHTML = sizeOptions(it, sel.value, size.value);
+});
+["q","inf","adf","pricef","sort"].forEach(id => $(id).addEventListener("input", render));
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>
